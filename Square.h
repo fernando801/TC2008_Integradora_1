@@ -25,7 +25,7 @@ class Square
 {
 private:
     float size = 1;
-    float vel = 0;
+
     float DimBoard = 1;
 
     float vertexCoords[8] = { // Coordinates for the vertices of a cube.
@@ -47,23 +47,29 @@ private:
     std::vector<std::vector<int>> adjacency_list;
 
 public:
-    int steps = -1;
+
+    float vel = 0;
+
+    int nextNode = 0;
+
+    int currentNode = 0;
+
+    int steps = 0;
 
     Position position;
 
     Direction direction;
 
-    int nextNode = 0;
-
     std::vector<Position> nodes_postiions;
 
     Square(float, float, float);
-    Square(float, std::vector<std::vector<int>>, std::vector<Position>, float, float, float);
+    Square(float, std::vector<std::vector<int>>, std::vector<Position>, int, float);
     ~Square();
     void set_direction();
     void random_update();
     void draw();
     void update();
+    void switch_node();
 };
 
 #endif

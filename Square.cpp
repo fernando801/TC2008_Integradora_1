@@ -1,11 +1,12 @@
 #include "Square.h"
 
-Square::Square(float dim, std::vector<std::vector<int>> nodes_, std::vector<Position> nodes_postiions_, float x, float y, float vel_)
+Square::Square(float dim, std::vector<std::vector<int>> nodes_, std::vector<Position> nodes_postiions_, int start, float vel_)
     : DimBoard(dim), nodes(nodes_), nodes_postiions(nodes_postiions_), size(dim / nodes_.size() * 0.8), vel(vel_), vertexCoords{size, size, -size, size, -size, -size, size, -size}
 {
+    vel = vel_;
 
-    position.x = x;
-    position.y = y;
+    position.x = nodes_postiions[start].x;
+    position.y = nodes_postiions[start].y;
 
     Color[0] = 1;
     Color[1] = 0;
@@ -18,49 +19,69 @@ Square::Square(float dim, std::vector<std::vector<int>> nodes_, std::vector<Posi
 
     int n = nodes.size();
 
+    for (int i = 0; i < n; i++)
+    {
 
-    for(int i = 0; i<n; i++){
-        if(i%2 == 0){
-            for(int j = 0; j<n; j++){
+        if (i % 2 == 0)
+        {
+            for (int j = 0; j < n; j++)
+            {
                 sequence.push(nodes[i][j]);
             }
-        }else{
-            for(int j = n-1; j>=0; j--){
+        }
+        else
+        {
+            for (int j = n - 1; j >= 0; j--)
+            {
                 sequence.push(nodes[i][j]);
             }
         }
     }
 
-    adjacency_list = std::vector<std::vector<int>>(n*n);
+    adjacency_list = std::vector<std::vector<int>>(n * n);
 
-    for(int i = 0; i<n; i++){
-        for(int j = 0; j<n; j++){
-            if(i>0 && j>0){
-                adjacency_list[nodes[i][j]].push_back(nodes[i-1][j-1]);
+    for (int i = 0; i < n; i++)
+    {
+        for (int j = 0; j < n; j++)
+        {
+            if (i > 0 && j > 0)
+            {
+                adjacency_list[nodes[i][j]].push_back(nodes[i - 1][j - 1]);
             }
-            if(i>0){
-                adjacency_list[nodes[i][j]].push_back(nodes[i-1][j]);
+            if (i > 0)
+            {
+                adjacency_list[nodes[i][j]].push_back(nodes[i - 1][j]);
             }
-            if(i>0 && j<n-1){
-                adjacency_list[nodes[i][j]].push_back(nodes[i-1][j+1]);
+            if (i > 0 && j < n - 1)
+            {
+                adjacency_list[nodes[i][j]].push_back(nodes[i - 1][j + 1]);
             }
-            if(j>0){
-                adjacency_list[nodes[i][j]].push_back(nodes[i][j-1]);
+            if (j > 0)
+            {
+                adjacency_list[nodes[i][j]].push_back(nodes[i][j - 1]);
             }
-            if(j<n-1){
-                adjacency_list[nodes[i][j]].push_back(nodes[i][j+1]);
+            if (j < n - 1)
+            {
+                adjacency_list[nodes[i][j]].push_back(nodes[i][j + 1]);
             }
-            if(i<n-1 && j>0){
-                adjacency_list[nodes[i][j]].push_back(nodes[i+1][j-1]);
+            if (i < n - 1 && j > 0)
+            {
+                adjacency_list[nodes[i][j]].push_back(nodes[i + 1][j - 1]);
             }
-            if(i<n-1){
-                adjacency_list[nodes[i][j]].push_back(nodes[i+1][j]);
+            if (i < n - 1)
+            {
+                adjacency_list[nodes[i][j]].push_back(nodes[i + 1][j]);
             }
-            if(i<n-1 && j<n-1){
-                adjacency_list[nodes[i][j]].push_back(nodes[i+1][j+1]);
+            if (i < n - 1 && j < n - 1)
+            {
+                adjacency_list[nodes[i][j]].push_back(nodes[i + 1][j + 1]);
             }
         }
     }
+
+    currentNode = start;
+    nextNode = adjacency_list[currentNode][rand() % adjacency_list[currentNode].size()];
+    set_direction();
 }
 
 Square::Square(float size_, float x, float y)
@@ -78,22 +99,31 @@ Square::~Square()
 {
 }
 
-void Square::set_direction(){
+void Square::set_direction()
+{
     direction.x = nodes_postiions[nextNode].x - position.x;
     direction.y = nodes_postiions[nextNode].y - position.y;
     // std::cout<<nodes_postiions[6].x<<" "<<position.x<<std::endl;
     // Se normaliza el vector de direccion
     float m = sqrt(direction.x * direction.x + direction.y * direction.y);
-    if(m != 0){
+    if (m != 0)
+    {
         direction.x /= m;
         direction.y /= m;
-    }else{
+    }
+    else
+    {
         direction.x = 0;
         direction.y = 0;
     }
     // se multiplica el vector de direccion por la magnitud de la velocidad
     direction.x *= vel;
     direction.y *= vel;
+}
+
+void Square::switch_node()
+{
+    nextNode = adjacency_list[currentNode][rand() % adjacency_list[currentNode].size()];
 }
 
 void Square::draw()
@@ -117,7 +147,8 @@ void Square::update()
     int new_x = position.x + direction.x;
     int new_y = position.y + direction.y;
 
-    if(sqrt(pow(nodes_postiions[nextNode].x - new_x, 2) + pow(nodes_postiions[nextNode].y - new_y, 2)) < vel){
+    if (sqrt(pow(nodes_postiions[nextNode].x - new_x, 2) + pow(nodes_postiions[nextNode].y - new_y, 2)) < vel)
+    {
         steps += 1;
         sequence.push(nextNode);
         nextNode = sequence.front();
@@ -136,8 +167,10 @@ void Square::random_update()
     int new_x = position.x + direction.x;
     int new_y = position.y + direction.y;
 
-    if(sqrt(pow(nodes_postiions[nextNode].x - new_x, 2) + pow(nodes_postiions[nextNode].y - new_y, 2)) < vel){
+    if (sqrt(pow(nodes_postiions[nextNode].x - new_x, 2) + pow(nodes_postiions[nextNode].y - new_y, 2)) < vel)
+    {
         steps += 1;
+        currentNode = nextNode;
         nextNode = adjacency_list[nextNode][rand() % adjacency_list[nextNode].size()];
         // std::cout<<steps<<std::endl;
     }

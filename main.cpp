@@ -8,6 +8,7 @@
 #include <random>
 #include <iomanip>
 #include <vector>
+#include <set>
 #include <chrono>
 #include <ctime>
 
@@ -15,7 +16,7 @@
 
 auto start = std::chrono::system_clock::now();
 
-bool move_randomly = false;
+// bool move_randomly = false;
 
 // Variables dimensiones de la pantalla
 int WIDTH = 800;
@@ -34,13 +35,14 @@ float Y_MAX = 500;
 float Z_MIN = -500;
 float Z_MAX = 500;
 // Size del tablero
-int DimBoard = (1000/(2*n)) * 2 * n;
+int DimBoard = (1000 / (2 * n)) * 2 * n;
 
 std::vector<std::vector<int>> nodes;
 std::vector<Position> nodes_postions;
 
 std::vector<Square> trash;
-Square* robot;
+// Square* robot;
+std::vector<Square> robots;
 
 void drawAxis()
 {
@@ -60,37 +62,42 @@ void drawAxis()
     glLineWidth(1.0);
 }
 
-void drawString(int x, int y, int z, std::string text) {
-  //glEnable(GL_TEXTURE_3D);
-  glColor3f(1.0f, 1.0f, 1.0f);
-  // Render the text
-  glRasterPos3i(x, y, z);
-  std::string s = text;
-  void * font = GLUT_BITMAP_9_BY_15;
-  for (std::string::iterator i = s.begin(); i != s.end(); ++i){
-    char c = *i;
-    glutBitmapCharacter(font, c);
-  }
+void drawString(int x, int y, int z, std::string text)
+{
+    // glEnable(GL_TEXTURE_3D);
+    glColor3f(1.0f, 1.0f, 1.0f);
+    // Render the text
+    glRasterPos3i(x, y, z);
+    std::string s = text;
+    void *font = GLUT_BITMAP_9_BY_15;
+    for (std::string::iterator i = s.begin(); i != s.end(); ++i)
+    {
+        char c = *i;
+        glutBitmapCharacter(font, c);
+    }
 }
 
-void drawGrid(){
+void drawGrid()
+{
     glLineWidth(5.0);
-    for(int i = 0; i < n; i++){
+    for (int i = 0; i < n; i++)
+    {
         glColor3f(0.0f, 0.0f, 0.0f);
         glBegin(GL_LINES);
-        glVertex2f((DimBoard/n) * 2 * i - DimBoard, -DimBoard);
-        glVertex2f((DimBoard/n) * 2 * i - DimBoard, DimBoard);
+        glVertex2f((DimBoard / n) * 2 * i - DimBoard, -DimBoard);
+        glVertex2f((DimBoard / n) * 2 * i - DimBoard, DimBoard);
         glEnd();
     }
 
-    for(int i = 0; i < n; i++){
+    for (int i = 0; i < n; i++)
+    {
         glColor3f(0.0f, 0.0f, 0.0f);
         glBegin(GL_LINES);
-        glVertex2f(-DimBoard, (DimBoard/n) * 2 * i - DimBoard);
-        glVertex2f(DimBoard, (DimBoard/n) * 2 * i - DimBoard);
+        glVertex2f(-DimBoard, (DimBoard / n) * 2 * i - DimBoard);
+        glVertex2f(DimBoard, (DimBoard / n) * 2 * i - DimBoard);
         glEnd();
     }
-    
+
     glLineWidth(1.0);
 }
 
@@ -100,7 +107,7 @@ void init()
     glViewport(0, 0, WIDTH, HEIGTH);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluOrtho2D(- DimBoard, DimBoard, -DimBoard, DimBoard);
+    gluOrtho2D(-DimBoard, DimBoard, -DimBoard, DimBoard);
 
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
@@ -120,13 +127,33 @@ void display()
     glVertex2d(DimBoard, DimBoard);
     glVertex2d(DimBoard, -DimBoard);
     drawGrid();
-    for(int i = 0; i<n; i++){
-        for(int j = 0; j<n; j++){
-            if(board[i][j] == 1){
+
+    std::set<int> nextNodes = {};
+
+    for (Square &robot : robots)
+    {
+        if (!nextNodes.insert(robot.nextNode).second)
+        {
+            robot.switch_node();
+        }
+    }
+
+    for (int i = 0; i < n; i++)
+    {
+        for (int j = 0; j < n; j++)
+        {
+            if (board[i][j] == 1)
+            {
                 node = nodes[i][j];
-                if(sqrt(pow(nodes_postions[node].x - robot->position.x, 2) + pow(nodes_postions[node].y - robot->position.y, 2)) < 10){
-                    board[i][j] = 0;
-                }else{
+                for (Square &robot : robots)
+                {
+                    if (sqrt(pow(nodes_postions[node].x - robot.position.x, 2) + pow(nodes_postions[node].y - robot.position.y, 2)) < robot.vel)
+                    {
+                        board[i][j] = 0;
+                    }
+                }
+                if (board[i][j] == 1)
+                {
                     Square((DimBoard / nodes.size() * 0.4), nodes_postions[node].x, nodes_postions[node].y).draw();
                     clean = false;
                 }
@@ -134,24 +161,27 @@ void display()
         }
     }
 
-    if(clean){
-        std::cout<<"Pasos dados: "<<robot->steps<<std::endl;
+    if (clean)
+    {
+        for (int i = 0; i < robots.size(); i++)
+        {
+            std::cout << "Pasos dados por el robot [" << i << "]: " << robots[i].steps << std::endl;
+        }
         auto end = std::chrono::system_clock::now();
- 
-        std::chrono::duration<double> elapsed_seconds = end-start;
+
+        std::chrono::duration<double> elapsed_seconds = end - start;
         std::time_t end_time = std::chrono::system_clock::to_time_t(end);
-    
+
         std::cout << "Elapsed time: " << elapsed_seconds.count() << "s" << std::endl;
         exit(0);
     }
 
-    // drawAxis();
-    if(move_randomly){
-        robot->random_update();
-    }else{
-        robot->update();
+    for (Square &robot : robots)
+    {
+        robot.random_update();
+        robot.draw();
     }
-    robot->draw();
+
     glEnd();
 
     // for(int k = 0; k<n*n; k++){
@@ -196,48 +226,74 @@ void keyboard(unsigned char key, int x, int y)
 
 int main(int argc, char **argv)
 {
-    std::cout<<"Indique el tamaño del tablero: ";
-    std::cin>>n;
+    srand((unsigned)time(NULL));
 
-    std::cout<<"Indique el número de basuras a recoger: ";
-    std::cin>>m;
+    std::cout << "Indique el tamaño del tablero: ";
+    std::cin >> n;
 
-    std::cout<<"Indique si el movimiento será aleatorio [1 para si 0 para no]: ";
-    std::cin>>move_randomly;
+    std::cout << "Indique el número de basuras a recoger: ";
+    std::cin >> m;
 
-    DimBoard = (1000/(2*n)) * 2 * n;
+    int r = 1;
+    std::cout << "Indique el número de robots limpiadores: ";
+    std::cin >> r;
 
-    board = std::vector<std::vector<int>>(n,std::vector<int>(n,0));
-    nodes = std::vector<std::vector<int>>(n,std::vector<int>(n,0));
-    nodes_postions = std::vector<Position>(n*n);
+    start = std::chrono::system_clock::now();
+
+    DimBoard = (1000 / (2 * n)) * 2 * n;
+
+    board = std::vector<std::vector<int>>(n, std::vector<int>(n, 0));
+    nodes = std::vector<std::vector<int>>(n, std::vector<int>(n, 0));
+    nodes_postions = std::vector<Position>(n * n);
 
     int i = 0;
     int j = 0;
 
-
-    for(int k = 0; k<m; k++){
+    for (int k = 0; k < m; k++)
+    {
         j = rand() % n;
         i = rand() % n;
-        
-        if(board[i][j] != 1){
-           board[i][j] = 1;
-        }else{
+
+        if (board[i][j] != 1)
+        {
+            board[i][j] = 1;
+        }
+        else
+        {
             k--;
         }
     }
 
     int k = 0;
 
-    for(int i = 0; i<n; i++){
-        for(int j = 0; j<n; j++){
+    for (int i = 0; i < n; i++)
+    {
+        for (int j = 0; j < n; j++)
+        {
             nodes[i][j] = k;
-            nodes_postions[k].y = (((DimBoard*2)/n) * i - DimBoard + DimBoard/n);
-            nodes_postions[k].x = (((DimBoard*2)/n) * j - DimBoard + DimBoard/n);
+            nodes_postions[k].y = (((DimBoard * 2) / n) * i - DimBoard + DimBoard / n);
+            nodes_postions[k].x = (((DimBoard * 2) / n) * j - DimBoard + DimBoard / n);
             k++;
         }
     }
 
-    robot = new Square(DimBoard, nodes, nodes_postions, (float)(DimBoard/n - DimBoard), (float)(DimBoard/n - DimBoard), 10);
+    std::set<int> robots_set = {};
+
+    for (int k = 0; k < r; k++)
+    {
+        i = rand() % (n * n);
+
+        if (!robots_set.insert(i).second)
+        {
+            k--;
+        }
+    }
+
+    std::set<int>::iterator it;
+    for (it = robots_set.begin(); it != robots_set.end(); it++)
+    {
+        robots.push_back(Square(DimBoard, nodes, nodes_postions, *it, 10));
+    }
 
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
@@ -249,6 +305,6 @@ int main(int argc, char **argv)
     glutIdleFunc(idle);
     glutKeyboardFunc(keyboard);
     glutMainLoop();
-    
+
     return 0;
 }
